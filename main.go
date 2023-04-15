@@ -7,20 +7,14 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = "password"
-	dbname   = "scoober"
-)
-
 func main() {
-	initDatabase()
+	config := LoadConfig()
+	initDatabase(config.Database.Host, config.Database.Port,
+		config.Database.User, config.Database.Password, config.Database.Dbname)
 }
 
-func initDatabase() {
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+func initDatabase(host string, port string, user string, password string, dbname string) {
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
