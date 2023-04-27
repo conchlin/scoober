@@ -1,45 +1,32 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
+	"image"
+	"image/color"
 	"log"
 	"os"
+	"scoober/database"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	_ "github.com/lib/pq"
 )
+
+var red = color.NRGBA{R: 0xC0, G: 0x40, B: 0x40, A: 0xFF}
 
 func main() {
 	config := LoadConfig()
-	initDatabase(config.Database.Host, config.Database.Port,
+	database.StartDB(config.Database.Host, config.Database.Port,
 		config.Database.User, config.Database.Password, config.Database.Dbname)
 	initGUI()
-}
-
-func initDatabase(host string, port string, user string, password string, dbname string) {
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-	db, err := sql.Open("postgres", psqlInfo)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
-	err = db.Ping()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("Successfully connected to Scoober")
 }
 
 func initGUI() {
@@ -72,6 +59,7 @@ func draw(w *app.Window) error {
 		// window rendering
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
+
 			if startButton.Clicked() {
 				activeGame = true
 				fmt.Println("Button has been clicked and game has started")
@@ -80,6 +68,10 @@ func draw(w *app.Window) error {
 				Axis:    layout.Vertical,
 				Spacing: layout.SpaceStart,
 			}.Layout(gtx,
+				layout.Rigid(
+					addTeamBoxes,
+				),
+				// add each layout item below
 				layout.Rigid(
 					func(gtx C) D {
 						// define the margins for the start button
@@ -105,6 +97,7 @@ func draw(w *app.Window) error {
 					},
 				),
 			)
+
 			e.Frame(gtx.Ops)
 		// window destroy
 		case system.DestroyEvent:
@@ -112,4 +105,27 @@ func draw(w *app.Window) error {
 		}
 	}
 	return nil
+}
+
+// ColorBox creates a widget with the specified dimensions and color.
+func ColorBox(gtx layout.Context, size image.Point, color color.NRGBA) layout.Dimensions {
+	defer clip.Rect{Max: size}.Push(gtx.Ops).Pop()
+	paint.ColorOp{Color: color}.Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
+	return layout.Dimensions{Size: size}
+}
+
+func addTeamBoxes(gtx layout.Context) layout.Dimensions {
+	return layout.Flex{
+		Spacing:   layout.SpaceSides,
+		Alignment: layout.Middle,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return ColorBox(gtx, image.Pt(300, 450), red)
+		}),
+		layout.Rigid(layout.Spacer{Width: 20}.Layout),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return ColorBox(gtx, image.Pt(300, 450), red)
+		}),
+	)
 }
